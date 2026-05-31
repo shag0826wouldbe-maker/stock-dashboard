@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>株式監視ダッシュボード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F7F6F3;
+  --bg2: #EFEDE8;
+  --bg3: #E4E1DA;
+  --border: #D6D2C9;
+  --border2: #C8C4BB;
+  --text: #1A1915;
+  --text2: #5C5A54;
+  --text3: #8A8780;
+  --green: #1D9E75;
+  --green-bg: #E1F5EE;
+  --green-text: #085041;
+  --red: #D85A30;
+  --red-bg: #FAECE7;
+  --red-text: #712B13;
+  --blue: #185FA5;
+  --blue-bg: #E6F1FB;
+  --blue-text: #0C447C;
+  --amber-bg: #FAEEDA;
+  --amber-text: #633806;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Noto Sans JP', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+.header { border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; background: var(--bg); position: sticky; top: 0; z-index: 10; }
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header h1 { font-size: 15px; font-weight: 500; letter-spacing: .02em; }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.header-right { display: flex; gap: 8px; align-items: center; }
+.inp { font-family: var(--mono); font-size: 13px; width: 140px; padding: 0 10px; height: 32px; border-radius: 6px; border: 1px solid var(--border2); background: white; color: var(--text); outline: none; }
+.inp:focus { border-color: var(--blue); }
+.btn { height: 32px; padding: 0 14px; font-size: 13px; font-family: var(--sans); cursor: pointer; border-radius: 6px; border: 1px solid var(--border2); background: var(--bg2); color: var(--text); transition: background .15s; }
+.btn:hover { background: var(--bg3); }
+.btn.primary { background: var(--blue); color: white; border-color: var(--blue); }
+.btn.primary:hover { background: #0C447C; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.main { padding: 20px 24px; }
+.toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; font-size: 12px; color: var(--text3); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 14px; }
+.card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 16px; position: relative; transition: box-shadow .15s; }
+.card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+.card:hover .del { opacity: .5; }
+.del { position: absolute; top: 10px; right: 10px; background: none; border: none; cursor: pointer; color: var(--text3); opacity: 0; font-size: 16px; padding: 2px 5px; border-radius: 4px; transition: opacity .15s, color .15s; }
+.del:hover { opacity: 1 !important; color: var(--red); }
+.head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.ticker { font-family: var(--mono); font-size: 15px; font-weight: 500; }
+.co-name { font-size: 11px; color: var(--text3); margin-top: 2px; max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.price-block { text-align: right; }
+.pval { font-family: var(--mono); font-size: 15px; font-weight: 500; }
+.chg { font-family: var(--mono); font-size: 12px; margin-top: 2px; }
+.up { color: var(--green); } .dn { color: var(--red); }
+.divider { height: 1px; background: var(--bg2); margin: 12px 0; }
+.sec { font-size: 10px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 8px; }
+.gauge-row { margin-bottom: 10px; }
+.g-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+.g-name { font-size: 12px; color: var(--text2); }
+.g-val { font-family: var(--mono); font-size: 12px; font-weight: 500; }
+.track { height: 7px; border-radius: 3.5px; background: var(--bg2); position: relative; }
+.cmark { position: absolute; left: 50%; top: 0; width: 1.5px; height: 7px; background: var(--border2); transform: translateX(-50%); }
+.fill { position: absolute; top: 0; height: 7px; border-radius: 3.5px; }
+.g-sub { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); margin-top: 2px; }
+.rsi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+.rsi-num { font-family: var(--mono); font-size: 22px; font-weight: 500; }
+.pill { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 20px; }
+.p-os { background: var(--blue-bg); color: var(--blue-text); }
+.p-ob { background: var(--amber-bg); color: var(--amber-text); }
+.p-str { background: var(--green-bg); color: var(--green-text); }
+.p-wk { background: var(--red-bg); color: var(--red-text); }
+.p-mid { background: var(--bg2); color: var(--text3); }
+.rsi-track { height: 9px; border-radius: 4.5px; background: var(--bg2); position: relative; overflow: hidden; }
+.rz { position: absolute; top: 0; height: 9px; }
+.rz-l { background: var(--blue-bg); left: 0; width: 30%; }
+.rz-m { background: var(--bg3); left: 30%; width: 40%; }
+.rz-r { background: var(--amber-bg); right: 0; width: 30%; }
+.rneedle { position: absolute; top: 0; width: 3px; height: 9px; border-radius: 1.5px; transform: translateX(-50%); }
+.rsi-labs { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); margin-top: 2px; }
+.range-bg { height: 4px; border-radius: 2px; background: var(--bg2); width: 100%; position: relative; margin: 7px 0; }
+.range-fill { position: absolute; height: 4px; border-radius: 2px; background: #C5DCF5; top: 0; left: 0; width: 100%; }
+.range-dot { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 10px; height: 10px; border-radius: 50%; background: var(--blue); border: 2px solid white; }
+.range-prev { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 2px; height: 14px; background: var(--text3); border-radius: 1px; }
+.range-labs { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; }
+.vol-bars { display: flex; gap: 5px; align-items: flex-end; height: 34px; margin: 5px 0; }
+.vol-bar { border-radius: 2px 2px 0 0; flex: 1; }
+.vol-labs { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); }
+.vol-ratio-row { display: flex; align-items: center; justify-content: space-between; margin-top: 5px; }
+.vol-track { height: 5px; border-radius: 2.5px; background: var(--bg2); margin-top: 4px; position: relative; }
+.vol-fill { height: 5px; border-radius: 2.5px; }
+.vol-base { position: absolute; left: 33.3%; top: -2px; width: 1.5px; height: 9px; background: var(--border2); }
+.sig { border-radius: 7px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+.sig-b { background: var(--green-bg); }
+.sig-s { background: var(--red-bg); }
+.sig-h { background: var(--bg2); }
+.sig-t { font-size: 13px; font-weight: 500; }
+.sig-tb { color: var(--green-text); } .sig-ts { color: var(--red-text); } .sig-th { color: var(--text3); }
+.sig-r { font-size: 11px; }
+.empty { text-align: center; padding: 60px; color: var(--text3); font-size: 14px; }
+.err { background: var(--red-bg); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--red-text); margin-bottom: 14px; }
+.sk { background: var(--bg2); border-radius: 4px; animation: ska 1.2s ease-in-out infinite; }
+@keyframes ska { 0%,100%{opacity:1} 50%{opacity:.3} }
+.spin { animation: spin 1s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.src { font-size: 11px; color: var(--text3); text-align: right; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="live-dot"></div>
+    <h1>株式監視ダッシュボード</h1>
+  </div>
+  <div class="header-right">
+    <input class="inp" id="inp" placeholder="コード (例: 7203.T)" />
+    <button class="btn primary" id="addBtn" onclick="addTicker()">＋ 追加</button>
+    <button class="btn" id="refBtn" onclick="refreshAll()"><span id="ri">↻</span> 更新</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="toolbar"><span id="upd">—</span></div>
+  <div id="errArea"></div>
+  <div class="grid" id="grid"></div>
+  <p class="src">データ: Yahoo Finance / Google Apps Script経由</p>
+</div>
+
+<script>
+const GAS = 'https://script.google.com/macros/s/AKfycbw6TjRQRzlajoxlTBwS1HHghS20lz6B2CMZUIuBrzVgQ5HLqzMXj94XHArQ23Plr7Kvbg/exec';
+const DEFAULT = ['AAPL', 'NVDA', 'TSLA', '7203.T'];
+// ★ 監視銘柄をここに追加できます
+const WATCHLIST_KEY = 'stock_watchlist_tickers';
+
+let stocks = [];
+let cbId = 0;
+
+// 銘柄リストをlocalStorageに保存
+function saveTickers() {
+  localStorage.setItem(WATCHLIST_KEY, JSON.stringify(stocks.map(s => s.ticker)));
+}
+function loadTickers() {
+  try { return JSON.parse(localStorage.getItem(WATCHLIST_KEY)) || DEFAULT; }
+  catch { return DEFAULT; }
+}
+
+function jsonp(url) {
+  return new Promise(function(resolve, reject) {
+    const name = '__gcb' + (cbId++);
+    const el = document.createElement('script');
+    const tid = setTimeout(function() { cleanup(); reject(new Error('タイムアウト(20秒)')); }, 20000);
+    function cleanup() { clearTimeout(tid); delete window[name]; el.parentNode && el.parentNode.removeChild(el); }
+    window[name] = function(d) { cleanup(); resolve(d); };
+    el.onerror = function() { cleanup(); reject(new Error('接続エラー')); };
+    el.src = url + '&callback=' + name;
+    document.head.appendChild(el);
+  });
+}
+
+async function fetchGAS(tickers) {
+  const url = GAS + '?tickers=' + encodeURIComponent(tickers.join(','));
+  const d = await jsonp(url);
+  if (!d.ok) throw new Error(d.error || 'GASエラー');
+  return d.data;
+}
+
+const dp = (p, m) => (p - m) / m * 100;
+const f2 = v => Number(v).toFixed(2);
+const fp = v => (v >= 0 ? '+' : '') + Number(v).toFixed(2) + '%';
+const fN = v => { const n = Number(v); return n >= 1000 ? n.toLocaleString('ja-JP', {maximumFractionDigits:0}) : n.toLocaleString('ja-JP', {maximumFractionDigits:2}); };
+
+function gauge(label, pct) {
+  const abs = Math.abs(pct), cap = Math.min(abs * 5, 50), pos = pct >= 0;
+  const col = pos ? (abs>5?'#1D9E75':abs>2?'#5DCAA5':'#A8DFD0') : (abs>5?'#D85A30':abs>2?'#F0997B':'#F5C4B3');
+  const tc = pos ? (abs>2?'#085041':'#1D9E75') : (abs>2?'#4A1B0C':'#D85A30');
+  const fs = pos ? `left:50%;width:${cap}%` : `left:${50-cap}%;width:${cap}%`;
+  return `<div class="gauge-row">
+    <div class="g-head"><span class="g-name">${label}</span><span class="g-val" style="color:${tc}">${fp(pct)}</span></div>
+    <div class="track"><div class="cmark"></div><div class="fill" style="${fs};background:${col}"></div></div>
+    <div class="g-sub"><span>-10%</span><span>基準</span><span>+10%</span></div>
+  </div>`;
+}
+
+function rsiLbl(r) {
+  r = Number(r);
+  if (r < 30) return {t:'売られすぎ', c:'p-os'};
+  if (r > 70) return {t:'買われすぎ', c:'p-ob'};
+  if (r > 60) return {t:'やや強い', c:'p-str'};
+  if (r < 40) return {t:'やや弱い', c:'p-wk'};
+  return {t:'中立域', c:'p-mid'};
+}
+
+function makeRange(d) {
+  const span = d.hi - d.lo;
+  const pos = span > 0 ? Math.max(0, Math.min(100, (d.price - d.lo) / span * 100)) : 50;
+  const prev = span > 0 ? Math.max(0, Math.min(100, (d.prevClose - d.lo) / span * 100)) : 50;
+  const diff = d.price - d.prevClose, dc = diff >= 0 ? 'var(--green)' : 'var(--red)';
+  return `<div>
+    <div class="sec">当日レンジ &amp; 前日終値</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+      <span style="font-size:11px;color:var(--text2)">前日終値 <span style="font-family:var(--mono);color:var(--text)">${fN(d.prevClose)}</span></span>
+      <span style="font-family:var(--mono);font-size:12px;font-weight:500;color:${dc}">${diff>=0?'+':''}${f2(diff)}</span>
+    </div>
+    <div class="range-bg">
+      <div class="range-fill"></div>
+      <div class="range-prev" style="left:${prev}%"></div>
+      <div class="range-dot" style="left:${pos}%"></div>
+    </div>
+    <div class="range-labs"><span style="color:var(--red)">安 ${fN(d.lo)}</span><span style="color:var(--green)">高 ${fN(d.hi)}</span></div>
+  </div>`;
+}
+
+function makeVol(d) {
+  const v = Array.isArray(d.vol5) && d.vol5.length ? d.vol5 : [0,0,0,0,0,0,d.volToday||0];
+  const mx = Math.max(...v, 1), ratio = d.vol20avg > 0 ? d.volToday / d.vol20avg : 1;
+  const rp = Math.min(ratio / 3 * 100, 100), rc = ratio > 1.5 ? 'var(--red)' : ratio > 1 ? 'var(--green)' : '#378ADD';
+  const bars = v.map((x, i) => {
+    const h = Math.round(x / mx * 30) + 4;
+    return `<div class="vol-bar" style="height:${h}px;background:${i===v.length-1?rc:'#C8C4BB'}" title="${fN(x)}万株"></div>`;
+  }).join('');
+  return `<div>
+    <div class="sec">出来高（20日平均比）</div>
+    <div class="vol-bars">${bars}</div>
+    <div class="vol-labs">${['−6','−5','−4','−3','−2','−1','今日'].map(l=>`<span>${l}</span>`).join('')}</div>
+    <div class="vol-ratio-row">
+      <span style="font-size:12px;color:var(--text2)">20日平均比</span>
+      <span style="font-family:var(--mono);font-size:13px;font-weight:500;color:${rc}">${Number(ratio).toFixed(2)}x${ratio>1.5?' <span style="font-size:10px;background:var(--red-bg);color:var(--red-text);padding:1px 6px;border-radius:10px;margin-left:4px">高水準</span>':''}</span>
+    </div>
+    <div class="vol-track"><div class="vol-base"></div><div class="vol-fill" style="width:${rp}%;background:${rc}"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:2px"><span>0x</span><span>平均(1x)</span><span>3x+</span></div>
+  </div>`;
+}
+
+function calcSig(d) {
+  let s = 0;
+  if (dp(d.price, d.ma5) > 0) s++; if (dp(d.price, d.ma25) > 0) s++;
+  if (dp(d.price, d.ma75) > 0) s++; if (d.ma5 > d.ma25) s++;
+  const r = Number(d.rsi14);
+  if (r < 30) return {sig:'buy', reason:'RSI売られすぎ圏 — 反発期待'};
+  if (r > 70 && s >= 3) return {sig:'sell', reason:'RSI買われすぎ + MA上方乖離'};
+  if (s >= 4) return {sig:'buy', reason:'MA全線上抜け・上昇トレンド'};
+  if (s <= 0) return {sig:'sell', reason:'MA全線下抜け・下降トレンド'};
+  if (r > 70) return {sig:'sell', reason:'RSI買われすぎ圏 — 過熱注意'};
+  return {sig:'hold', reason:'方向感なし・様子見'};
+}
+
+function renderCard(d) {
+  const ud = d.chg >= 0 ? 'up' : 'dn';
+  const rl = rsiLbl(d.rsi14), nc = Number(d.rsi14) < 30 ? '#378ADD' : Number(d.rsi14) > 70 ? 'var(--red)' : 'var(--text3)';
+  const {sig, reason} = calcSig(d);
+  const sc = sig==='buy'?'sig-b':sig==='sell'?'sig-s':'sig-h';
+  const tc = sig==='buy'?'sig-tb':sig==='sell'?'sig-ts':'sig-th';
+  const sl = sig==='buy'?'買いシグナル':sig==='sell'?'売りシグナル':'様子見';
+  return `<div class="card">
+    <button class="del" onclick="rm('${d.ticker}')" title="削除">×</button>
+    <div class="head">
+      <div><div class="ticker">${d.ticker}</div><div class="co-name">${d.name}</div></div>
+      <div class="price-block"><div class="pval">${fN(d.price)}</div><div class="chg ${ud}">${d.chg>=0?'+':''}${f2(d.chg)}%</div></div>
+    </div>
+    <div class="sec">移動平均からの乖離</div>
+    ${gauge('MA5', dp(d.price, d.ma5))}${gauge('MA25', dp(d.price, d.ma25))}${gauge('MA75', dp(d.price, d.ma75))}
+    <div class="divider"></div>
+    <div class="sec">RSI (14日)</div>
+    <div class="rsi-top"><span class="rsi-num" style="color:${nc}">${f2(d.rsi14)}</span><span class="pill ${rl.c}">${rl.t}</span></div>
+    <div class="rsi-track"><div class="rz rz-l"></div><div class="rz rz-m"></div><div class="rz rz-r"></div><div class="rneedle" style="left:${Math.min(Math.max(Number(d.rsi14),0),100)}%;background:${nc}"></div></div>
+    <div class="rsi-labs"><span style="color:var(--blue-text)">← 売られすぎ(30)</span><span>中立</span><span style="color:var(--amber-text)">買われすぎ(70) →</span></div>
+    <div class="divider"></div>
+    ${makeRange(d)}
+    <div class="divider"></div>
+    ${makeVol(d)}
+    <div class="sig ${sc}"><span class="sig-t ${tc}">${sl}</span><span class="sig-r ${tc}">${reason}</span></div>
+  </div>`;
+}
+
+function skeleton(n) {
+  document.getElementById('grid').innerHTML = Array(n).fill(`<div class="card"><div class="sk" style="width:90px;height:15px;margin-bottom:12px"></div><div class="sk" style="width:100%;height:7px;margin-bottom:8px"></div><div class="sk" style="width:100%;height:7px;margin-bottom:8px"></div><div class="sk" style="width:65%;height:7px"></div></div>`).join('');
+}
+
+function render() {
+  const g = document.getElementById('grid');
+  if (!stocks.length) { g.innerHTML = '<div class="empty">銘柄コードを入力して追加してください<br><span style="font-size:12px;margin-top:6px;display:block;color:#8A8780">例: AAPL, NVDA, 7203.T, 9984.T, 6758.T</span></div>'; return; }
+  g.innerHTML = stocks.map(renderCard).join('');
+}
+
+function showErr(msg) {
+  document.getElementById('errArea').innerHTML = `<div class="err">${msg}</div>`;
+  setTimeout(() => document.getElementById('errArea').innerHTML = '', 7000);
+}
+
+function busy(on) {
+  document.getElementById('addBtn').disabled = on;
+  document.getElementById('refBtn').disabled = on;
+  document.getElementById('ri').className = on ? 'spin' : '';
+}
+
+async function addTicker() {
+  const el = document.getElementById('inp'), t = el.value.trim().toUpperCase();
+  if (!t || stocks.find(s => s.ticker === t)) { el.value = ''; return; }
+  busy(true); document.getElementById('upd').textContent = '取得中...';
+  try {
+    const r = await fetchGAS([t]);
+    if (r && r[0]) { stocks.push(r[0]); saveTickers(); render(); }
+    document.getElementById('upd').textContent = '更新: ' + new Date().toLocaleTimeString('ja-JP');
+  } catch(e) { showErr('取得エラー: ' + e.message); }
+  finally { busy(false); el.value = ''; }
+}
+
+async function refreshAll() {
+  if (!stocks.length || document.getElementById('addBtn').disabled) return;
+  busy(true); document.getElementById('upd').textContent = '取得中...';
+  try {
+    const r = await fetchGAS(stocks.map(s => s.ticker));
+    if (r && r.length) { r.forEach(x => { const i = stocks.findIndex(s => s.ticker === x.ticker); if (i >= 0) stocks[i] = x; }); render(); }
+    document.getElementById('upd').textContent = '更新: ' + new Date().toLocaleTimeString('ja-JP');
+  } catch(e) { showErr('更新エラー: ' + e.message); }
+  finally { busy(false); }
+}
+
+function rm(t) { stocks = stocks.filter(s => s.ticker !== t); saveTickers(); render(); }
+document.getElementById('inp').addEventListener('keydown', e => { if (e.key === 'Enter') addTicker(); });
+
+// 起動時: 保存済みリストまたはデフォルトで取得
+(async () => {
+  const saved = loadTickers();
+  skeleton(saved.length);
+  busy(true);
+  document.getElementById('upd').textContent = 'Yahoo Financeから取得中...';
+  try {
+    stocks = await fetchGAS(saved);
+    saveTickers();
+    render();
+    document.getElementById('upd').textContent = '更新: ' + new Date().toLocaleTimeString('ja-JP');
+  } catch(e) {
+    showErr('取得エラー: ' + e.message);
+    document.getElementById('grid').innerHTML = '<div class="empty">データ取得に失敗しました<br><span style="font-size:12px">' + e.message + '</span></div>';
+  } finally { busy(false); }
+})();
+</script>
+</body>
+</html>
